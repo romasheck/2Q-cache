@@ -7,7 +7,7 @@
 
 namespace caches
 {
-    
+
 template <typename T, typename KeyT = int> class Q_cache
 {
     size_t sz_;
@@ -19,17 +19,35 @@ template <typename T, typename KeyT = int> class Q_cache
 
     public:
 
-    Q_cache(size_t sz) : sz_(sz) {}
+    Q_cache (size_t sz) : sz_(sz) {}
 
-    ~Q_cache() {}
+    ~Q_cache () {}
 
-    bool full() const {return (cache_.size == sz_);}
+    bool    full () const 
+    {return (cache_.size() == sz_);}
 
-    void    push_front          (KeyT key);
+    bool    miss (KeyT key) const 
+    {return (hash_.find(key) == hash_.end());}
 
-    void    pop_back            ();
+    void    push_front          (KeyT key)
+    {
+        cache_.push_front(key);
+        hash_[key] = cache_.begin();
+    }
 
-    void    pop_elem            (KeyT key);
+    void    pop_back            ()
+    {
+        auto tmp = cache_.back();
+        cache_.pop_back();
+        hash_.erase(tmp);
+    }
+
+    void    pop_elem            (KeyT key)
+    {
+        auto tmp = hash_.find(key);
+        cache_.erase(tmp);
+        hash_.erase(tmp);
+    }
 };
 
 template <typename T, typename KeyT = int> class TwoQ_cache
@@ -44,13 +62,52 @@ template <typename T, typename KeyT = int> class TwoQ_cache
 
     ~TwoQ_cache() {}
     
-    template <typename F> bool lookup_update (KeyT key, F slow_get_page);
+    template <typename F> bool lookup_update (KeyT key, F slow_get_page)
+    {
+        if (lru.miss(key))
+        {
+            if (lru.full())
+            {
+                if (que.miss(key))
+                {
+                    if (que.full())
+                    {
+                        que.pop_back();
+                    }
+                    que.push_front(slow_get_page(key));
+
+                    return false;
+                }
+                else
+                {
+                    bring_out(key);
+                }                
+            }
+            else
+            {
+                lru.push_front(slow_get_page(key));
+
+                return false;
+            }
+        }
+        else
+        {
+            lru.pop_elem(key);
+            lru.push_front(key);
+        }
+
+        return true;
+    }
   
     private:
 
-    void bring_out (KeyT key);
+    void bring_out (KeyT key)
+    {
+        que.pop_elem(key);
+        lru.push_front(key);
+    }
 };
 
-}
+};
 
 #endif

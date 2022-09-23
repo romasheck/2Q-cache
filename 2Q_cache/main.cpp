@@ -14,7 +14,7 @@ int main ()
 
     int key = 0;
     bool hit_flag = 0;
-    for (int i = 0; i<=number_page; i++)
+    for (int i = 0; i <= number_page; i++)
     {
         std::cin>>key;
         
